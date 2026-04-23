@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Si Yo Penjaga Lingkungan Hidup</title>
+    <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #eef7f9; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
+        h2 { color: #2c3e50; margin-bottom: 5px; }
+        #main-container { display: flex; gap: 20px; width: 100%; max-width: 1200px; margin-top: 20px; }
+        
+        /* Area Kerja */
+        #blocklyDiv { height: 550px; flex: 2; border: 3px solid #2980b9; border-radius: 12px; background: white; }
+        
+        /* Sidebar Hasil & Ekosistem */
+        #sidebar { flex: 1; max-width: 350px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; border-top: 6px solid #2980b9; }
+        
+        /* Visual Laut & Langit */
+        #environment-preview { width: 100%; height: 200px; background: #87CEEB; border-radius: 8px; position: relative; overflow: hidden; margin-bottom: 15px; border: 2px solid #ddd; }
+        #sea { position: absolute; bottom: 0; width: 100%; height: 50%; background: #3498db; transition: background 0.5s; }
+        #shell { font-size: 60px; position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); transition: all 0.5s; }
+        #smoke-cloud { font-size: 40px; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); opacity: 0; transition: opacity 0.5s; }
+        
+        .status-box { background: #f8f9fa; padding: 15px; border-radius: 10px; text-align: left; border-left: 5px solid #2980b9; }
+        .alert { color: #e74c3c; font-weight: bold; font-size: 0.9em; }
+        button { background: #2980b9; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; margin-top: 15px; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h2>🛡️ Si Yo Penjaga Lingkungan Hidup</h2>
+    <p>Bantu Si Yo melihat dampak polusi udara terhadap cangkang kerang di laut!</p>
+
+    <div id="main-container">
+        <div id="blocklyDiv"></div>
+
+        <div id="sidebar">
+            <h3>Kondisi Ekosistem</h3>
+            <div id="environment-preview">
+                <div id="smoke-cloud">☁️💨</div>
+                <div id="sea"></div>
+                <div id="shell">🐚</div>
+            </div>
+            
+            <div class="status-box">
+                <div><b>pH Air Laut:</b> <span id="ph-val">8.1</span></div>
+                <div id="ph-desc">Kondisi: Sehat ✅</div>
+                <hr>
+                <div id="eco-message">Kerang tumbuh dengan kuat dan cantik.</div>
+            </div>
+
+            <button onclick="resetEco()">Bersihkan Alam</button>
+        </div>
+    </div>
+
+    <xml id="toolbox" style="display: none">
+        <category name="Sumber Polusi" colour="0">
+            <block type="pollution_source"></block>
+        </category>
+        <category name="Siklus Hujan" colour="210">
+            <block type="rain_mixer"></block>
+        </category>
+    </xml>
+
+    <script>
+        // --- 1. DEFINISI BLOK ---
+        Blockly.defineBlocksWithJsonArray([
+          {
+            "type": "pollution_source",
+            "message0": "Sumber: %1",
+            "args0": [{
+                "type": "field_dropdown", "name": "TYPE",
+                "options": [
+                  ["☁️ Udara Bersih", "7.0"],
+                  ["🚗 Asap Kendaraan", "5.0"],
+                  ["🏭 Asap Pabrik", "4.0"],
+                  ["🔥 Kebakaran Hutan", "3.5"]
+                ]
+            }],
+            "output": "Air", "colour": 0
+          },
+          {
+            "type": "rain_mixer",
+            "message0": "Hujan: Campur Air Laut + %1 %2",
+            "args0": [
+              { "type": "field_number", "name": "VOL", "value": 50, "min": 0 },
+              { "type": "input_value", "name": "POLLUTION", "check": "Air" }
+            ],
+            "output": "Sea", "colour": 210
+          }
+        ]);
+
+        const workspace = Blockly.inject('blocklyDiv', { toolbox: document.getElementById('toolbox'), trashcan: true });
+
+        // --- 2. LOGIKA PENJAGA LINGKUNGAN ---
+        function getEcoData(block) {
+            if (!block) return null;
+            if (block.type === 'pollution_source') {
+                return { ph: parseFloat(block.getFieldValue('TYPE')), active: true };
+            }
+            if (block.type === 'rain_mixer') {
+                const vol = parseFloat(block.getFieldValue('VOL')) || 0;
+                const data = getEcoData(block.getInputTargetBlock('POLLUTION'));
+                
+                // Rasio Hujan Asam: Laut punya pH alami 8.1
+                const oceanPH = 8.1;
+                const oceanVol = 200; // Kapasitas laut simulasi
+                
+                if (!data) return { ph: oceanPH, vol: 0 };
+                
+                const finalPH = ((oceanPH * oceanVol) + (data.ph * vol)) / (oceanVol + vol);
+                return { ph: finalPH, vol: vol };
+            }
+            return null;
+        }
+
+        function updateUI(data) {
+            const sea = document.getElementById('sea');
+            const shell = document.getElementById('shell');
+            const cloud = document.getElementById('smoke-cloud');
+            const phVal = document.getElementById('ph-val');
+            const phDesc = document.getElementById('ph-desc');
+            const ecoMsg = document.getElementById('eco-message');
+
+            const ph = data ? data.ph : 8.1;
+            phVal.innerText = ph.toFixed(2);
+            
+            // Perubahan Visual Laut (Makin asam makin pucat/keruh)
+            if (ph >= 7.8) {
+                sea.style.background = "#3498db";
+                shell.innerHTML = "🐚";
+                shell.style.filter = "none";
+                phDesc.innerHTML = "Kondisi: <span style='color:green'>Sehat ✅</span>";
+                ecoMsg.innerText = "Si Yo senang! Kerang tumbuh dengan kuat dan cantik.";
+            } else if (ph >= 6.5) {
+                sea.style.background = "#5dade2";
+                shell.innerHTML = "🐚";
+                shell.style.filter = "grayscale(50%)";
+                phDesc.innerHTML = "Kondisi: <span style='color:orange'>Terancam ⚠️</span>";
+                ecoMsg.innerText = "Si Yo waspada! Air mulai asam, cangkang kerang mulai menipis.";
+            } else {
+                sea.style.background = "#a9cce3";
+                shell.innerHTML = "🦴"; // Tulang/hancur
+                shell.style.filter = "grayscale(100%) blur(1px)";
+                phDesc.innerHTML = "Kondisi: <span style='color:red'>Bahaya! ❌</span>";
+                ecoMsg.innerText = "Oh tidak! Hujan asam menghancurkan rumah kerang kita.";
+            }
+
+            // Visual Awan Asap
+            cloud.style.opacity = data && data.vol > 0 ? "1" : "0";
+        }
+
+        function resetEco() { workspace.clear(); updateUI(null); }
+
+        workspace.addChangeListener(() => {
+            const blocks = workspace.getAllBlocks(false);
+            let result = null;
+            blocks.forEach(b => { if (!b.getParent()) result = getEcoData(b); });
+            updateUI(result);
+        });
+    </script>
+</body>
+</html>
