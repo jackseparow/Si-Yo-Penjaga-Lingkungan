@@ -1,195 +1,38 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Si Yo Penjaga Lingkungan Hidup</title>
-    <script src="https://unpkg.com/blockly/blockly.min.js"></script>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #eef7f9; display: flex; flex-direction: column; align-items: center; padding: 20px; margin: 0; }
-        #main-container { display: flex; gap: 20px; width: 100%; max-width: 1300px; margin-top: 10px; }
+function calculateEco(block) {
+    if (!block) return null;
+    
+    if (block.type === 'mixer_eco') { 
+        const pBlock = block.getInputTargetBlock('P'); // Slot Polutan
+        const fBlock = block.getInputTargetBlock('F'); // Slot Solusi
         
-        /* Area Kerja */
-        #blocklyDiv { height: 600px; flex: 2; border: 3px solid #2980b9; border-radius: 12px; background: white; }
-        
-        /* Sidebar Visual */
-        #sidebar { flex: 1.2; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; border-top: 8px solid #2980b9; }
-        
-        #env-preview { width: 100%; height: 350px; background: #87CEEB; border-radius: 12px; position: relative; overflow: hidden; border: 2px solid #ddd; }
-        #sea { position: absolute; bottom: 0; width: 100%; height: 50%; background: #3498db; transition: all 0.6s ease; }
-        #smoke { font-size: 60px; position: absolute; top: 20px; left: 50%; transform: translateX(-50%); opacity: 0; transition: 0.5s; }
-        #shell { font-size: 80px; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); transition: all 0.5s; }
-        #action-icon { font-size: 50px; position: absolute; top: 100px; right: 20px; opacity: 0; transition: 0.5s; }
+        let basePH = 8.1; // pH Laut Alami
+        let impact = 0;   // Efek Polusi (Biasanya negatif)
+        let recovery = 0; // Efek Solusi (Harus positif)
 
-        .status-box { background: #f8f9fa; padding: 15px; border-radius: 10px; text-align: left; border-left: 5px solid #2980b9; margin-top: 15px; }
-        .ph-badge { display: inline-block; padding: 5px 15px; border-radius: 20px; color: white; font-weight: bold; margin-bottom: 10px; }
-        button { background: #e74c3c; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; margin-top: 10px; cursor: pointer; font-weight: bold; }
-    </style>
-</head>
-<body>
-
-    <h2 style="color: #2c3e50;">🛡️ Si Yo Penjaga Lingkungan Hidup</h2>
-    <p>Gunakan teknologi dan aksi alam untuk menjaga laut kita!</p>
-
-    <div id="main-container">
-        <div id="blocklyDiv"></div>
-
-        <div id="sidebar">
-            <div id="env-preview">
-                <div id="smoke">🌫️</div>
-                <div id="action-icon">🌳</div>
-                <div id="sea">
-                    <div id="shell">🐚</div>
-                </div>
-            </div>
-            
-            <div class="status-box">
-                <div id="ph-badge" class="ph-badge" style="background: #2ecc71;">pH 8.1</div>
-                <div id="eco-status"><b>Kondisi: Sehat ✅</b></div>
-                <p id="eco-msg" style="font-size: 0.9em; color: #555;">Si Yo senang! Air jernih dan kerang sangat kuat.</p>
-            </div>
-
-            <button onclick="resetEco()">Reset Alam</button>
-        </div>
-    </div>
-
-    <xml id="toolbox" style="display: none">
-        <category name="Sumber Polutan" colour="0">
-            <block type="source_pollution"></block>
-        </category>
-        <category name="Aksi Si Yo" colour="120">
-            <block type="action_fix"></block>
-        </category>
-        <category name="Awan Hujan" colour="210">
-            <block type="mixer_eco"></block>
-        </category>
-    </xml>
-
-    <script>
-        // --- 1. DEFINISI BLOK (Format JSON Paling Stabil) ---
-        Blockly.defineBlocksWithJsonArray([
-          {
-            "type": "source_pollution",
-            "message0": "Polutan: %1",
-            "args0": [{
-                "type": "field_dropdown", "name": "TYPE",
-                "options": [
-                  ["🚗 Asap Kendaraan", "5.0"],
-                  ["🏭 Emisi Pabrik", "3.5"],
-                  ["🔥 Kebakaran Hutan", "4.0"]
-                ]
-            }],
-            "output": "Pollutant", "colour": 0
-          },
-          {
-            "type": "action_fix",
-            "message0": "Solusi: %1",
-            "args0": [{
-                "type": "field_dropdown", "name": "TYPE",
-                "options": [
-                  ["🌳 Tanam Pohon", "1.5"],
-                  ["⚙️ Filter Pabrik", "2.0"],
-                  ["🔌 Energi Bersih", "1.8"]
-                ]
-            }],
-            "output": "Fix", "colour": 120
-          },
-          {
-            "type": "mixer_eco",
-            "message0": "Awan Hujan %1 Polutan: %2 %3 Solusi: %4",
-            "args0": [
-              { "type": "input_dummy" },
-              { "type": "input_value", "name": "P", "check": "Pollutant" },
-              { "type": "input_dummy" },
-              { "type": "input_value", "name": "F", "check": "Fix" }
-            ],
-            "output": null, "colour": 210
-          }
-        ]);
-
-        // Inisialisasi
-        const workspace = Blockly.inject('blocklyDiv', { toolbox: document.getElementById('toolbox'), trashcan: true });
-
-        function getPHColor(ph) {
-            if (ph >= 7.8) return "#2ecc71"; // Hijau
-            if (ph >= 6.5) return "#f39c12"; // Oranye
-            return "#e74c3c"; // Merah
+        // 1. Ambil nilai dari Polutan
+        if (pBlock) {
+            // Misalnya: (pH Polutan 4.0 - 7.0) = -3.0
+            impact = parseFloat(pBlock.getFieldValue('TYPE')) - 7.0;
         }
 
-        function calculateEco(block) {
-            if (!block) return null;
-            
-            if (block.type === 'source_pollution') {
-                return { ph: parseFloat(block.getFieldValue('TYPE')), type: 'p' };
-            }
-            if (block.type === 'action_fix') {
-                return { power: parseFloat(block.getFieldValue('TYPE')), type: 'f', icon: block.getFieldValue('TYPE') };
-            }
-            if (block.type === 'mixer_eco') {
-                const pBlock = block.getInputTargetBlock('P');
-                const fBlock = block.getInputTargetBlock('F');
-                
-                const pData = calculateEco(pBlock);
-                const fData = calculateEco(fBlock);
-                
-                let basePH = 8.1;
-                let impact = pData ? (pData.ph - 7.5) : 0; // Seberapa turun pH-nya
-                let fix = fData ? fData.power : 0;
-                
-                let finalPH = basePH + impact + fix;
-                if (finalPH > 8.5) finalPH = 8.5;
-
-                return { ph: finalPH, hasPoll: !!pData, hasFix: !!fData, fixIcon: fBlock ? fBlock.getFieldValue('TYPE') : null };
-            }
-            return null;
+        // 2. Ambil nilai dari Solusi (BAGIAN PENTING!)
+        if (fBlock) {
+            // Ambil nilai kekuatan netralisir dari dropdown solusi
+            recovery = parseFloat(fBlock.getFieldValue('TYPE'));
         }
+        
+        // 3. Hitung Total Akhir
+        let finalPH = basePH + impact + recovery;
 
-        function updateUI(data) {
-            const sea = document.getElementById('sea');
-            const shell = document.getElementById('shell');
-            const smoke = document.getElementById('smoke');
-            const actionIcon = document.getElementById('action-icon');
-            const badge = document.getElementById('ph-badge');
-            
-            const ph = data ? data.ph : 8.1;
-            badge.innerText = "pH " + ph.toFixed(1);
-            badge.style.background = getPHColor(ph);
+        // Jangan biarkan laut terlalu basa (maksimal 8.5)
+        if (finalPH > 8.5) finalPH = 8.5;
 
-            // Efek Visual
-            smoke.style.opacity = (data && data.hasPoll) ? "1" : "0";
-            actionIcon.style.opacity = (data && data.hasFix) ? "1" : "0";
-            if(data && data.hasFix) {
-                // Ganti ikon sesuai pilihan (pohon/mesin)
-                const val = data.fixIcon;
-                actionIcon.innerText = val == "1.5" ? "🌳" : "⚙️";
-            }
-
-            if (ph >= 7.8) {
-                sea.style.background = "#3498db";
-                shell.innerHTML = "🐚";
-                document.getElementById('eco-status').innerHTML = "<b>Kondisi: Sehat ✅</b>";
-                document.getElementById('eco-msg').innerText = "Si Yo berhasil! Air jernih dan kerang sangat kuat.";
-            } else if (ph >= 6.5) {
-                sea.style.background = "#5dade2";
-                shell.innerHTML = "🐚";
-                document.getElementById('eco-status').innerHTML = "<b>Kondisi: Terancam ⚠️</b>";
-                document.getElementById('eco-msg').innerText = "Waspada! Air mulai asam, cangkang kerang mulai menipis.";
-            } else {
-                sea.style.background = "#a9cce3";
-                shell.innerHTML = "🦴";
-                document.getElementById('eco-status').innerHTML = "<b>Kondisi: Bahaya! ❌</b>";
-                document.getElementById('eco-msg').innerText = "Gawat! Hujan asam menghancurkan rumah kerang.";
-            }
-        }
-
-        function resetEco() { workspace.clear(); updateUI(null); }
-
-        workspace.addChangeListener(() => {
-            const blocks = workspace.getAllBlocks(false);
-            let topBlock = null;
-            blocks.forEach(b => { if(!b.getParent()) topBlock = b; });
-            const data = calculateEco(topBlock);
-            updateUI(data);
-        });
-    </script>
-</body>
-</html>
+        return { 
+            ph: finalPH, 
+            hasPoll: !!pBlock, 
+            hasFix: !!fBlock,
+            fixIcon: fBlock ? fBlock.getFieldValue('TYPE') : null 
+        };
+    }
+    return null;
+}
